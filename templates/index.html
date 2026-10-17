@@ -1,0 +1,227 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Finder</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <main class="container">
+        <header>
+            <h1>Book Finder</h1>
+            <p>Ищите книги через Open Library</p>
+        </header>
+
+        <form id="search-form">
+            <label for="title">Название книги</label>
+
+            <div class="search-row">
+                <input
+                    type="text"
+                    id="title"
+                    placeholder="Например, Harry Potter"
+                    value="Harry Potter"
+                    required
+                >
+                <button type="submit">Найти</button>
+            </div>
+
+            <label for="mode">Способ получения данных</label>
+            <select id="mode">
+                <option value="rest">REST API</option>
+                <option value="graphql">GraphQL</option>
+            </select>
+
+            <fieldset id="graphql-fields">
+                <legend>Поля GraphQL</legend>
+
+                <label class="checkbox">
+                    <input type="checkbox" value="title" checked>
+                    Название
+                </label>
+
+                <label class="checkbox">
+                    <input type="checkbox" value="author" checked>
+                    Автор
+                </label>
+
+                <label class="checkbox">
+                    <input type="checkbox" value="year" checked>
+                    Год публикации
+                </label>
+
+                <label class="checkbox">
+                    <input type="checkbox" value="cover_id" checked>
+                    Обложка
+                </label>
+            </fieldset>
+        </form>
+
+        <p id="status" role="status"></p>
+        <section id="results" class="books"></section>
+    </main>
+
+    <script>
+        const form = document.querySelector("#search-form");
+        const titleInput = document.querySelector("#title");
+        const modeSelect = document.querySelector("#mode");
+        const fieldsBox = document.querySelector("#graphql-fields");
+        const results = document.querySelector("#results");
+        const status = document.querySelector("#status");
+
+        modeSelect.addEventListener("change", () => {
+            fieldsBox.hidden = modeSelect.value !== "graphql";
+        });
+
+        function getSelectedFields() {
+            return [...fieldsBox.querySelectorAll(
+                'input[type="checkbox"]:checked'
+            )].map(input => input.value);
+        }
+
+        async function searchREST(title) {
+            const params = new URLSearchParams({
+                title: title,
+                limit: "10"
+            });
+
+            const response = await fetch(`/rest/books?${params}`);
+
+            if (!response.ok) {
+                throw new Error("Не удалось получить книги через REST");
+            }
+
+            const data = await response.json();
+            return data.books;
+        }
+
+        async function searchGraphQL(title, fields) {
+            if (fields.length === 0) {
+                throw new Error("Выберите хотя бы одно поле GraphQL");
+            }
+
+            const query = `
+                query SearchBooks($title: String!, $limit: Int!) {
+                    searchBooks(title: $title, limit: $limit) {
+                        ${fields.map(field => {
+                            if (field === "cover_id") {
+                                return "coverId: coverId";
+                            }
+                            return field;
+                        }).join("\n")}
+                    }
+                }
+            `;
+
+            const response = await fetch("/graphql", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    query: query,
+                    variables: {
+                        title: title,
+                        limit: 10
+                    }
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error("Ошибка GraphQL-запроса");
+            }
+
+            const data = await response.json();
+
+            if (data.errors) {
+                throw new Error(data.errors[0].message);
+            }
+
+            return data.data.searchBooks;
+        }
+
+        function renderBooks(books, mode, fields) {
+            results.replaceChildren();
+
+            if (books.length === 0) {
+                results.textContent = "Книги не найдены.";
+                return;
+            }
+
+            books.forEach(book => {
+                const card = document.createElement("article");
+                card.className = "book-card";
+
+                const selected = mode === "rest"
+                    ? ["title", "author", "year", "cover_id"]
+                    : fields;
+
+                const coverId = book.coverId ?? book.cover_id;
+
+                if (selected.includes("cover_id") && coverId) {
+                    const img = document.createElement("img");
+                    img.src = `https://covers.openlibrary.org/b/id/${coverId}-M.jpg`;
+                    img.alt = `Обложка: ${book.title || "книга"}`;
+                    img.loading = "lazy";
+                    img.onerror = () => img.remove();
+                    card.append(img);
+                }
+
+                const info = document.createElement("div");
+
+                if (selected.includes("title")) {
+                    const heading = document.createElement("h2");
+                    heading.textContent = book.title || "Без названия";
+                    info.append(heading);
+                }
+
+                if (selected.includes("author")) {
+                    const author = document.createElement("p");
+                    author.textContent = `Автор: ${book.author || "Не указан"}`;
+                    info.append(author);
+                }
+
+                if (selected.includes("year")) {
+                    const year = document.createElement("p");
+                    year.textContent = `Год: ${book.year ?? "Не указан"}`;
+                    info.append(year);
+                }
+
+                card.append(info);
+                results.append(card);
+            });
+        }
+
+        form.addEventListener("submit", async event => {
+            event.preventDefault();
+
+            const title = titleInput.value.trim();
+            const mode = modeSelect.value;
+            const fields = getSelectedFields();
+
+            if (!title) return;
+
+            status.textContent = "Загрузка...";
+            results.replaceChildren();
+
+            try {
+                const books = mode === "rest"
+                    ? await searchREST(title)
+                    : await searchGraphQL(title, fields);
+
+                renderBooks(books, mode, fields);
+                status.textContent = `Найдено книг: ${books.length}. Режим: ${
+                    mode === "rest" ? "REST" : "GraphQL"
+                }`;
+            } catch (error) {
+                status.textContent = `Ошибка: ${error.message}`;
+            }
+        });
+
+        fieldsBox.hidden = modeSelect.value !== "graphql";
+        form.requestSubmit();
+    </script>
+</body>
+</html>

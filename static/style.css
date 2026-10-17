@@ -1,0 +1,137 @@
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: #f3f5f9;
+    color: #202938;
+    font-family: Arial, sans-serif;
+}
+
+.container {
+    max-width: 1000px;
+    margin: 40px auto;
+    padding: 24px;
+}
+
+header {
+    margin-bottom: 28px;
+}
+
+header h1 {
+    margin-bottom: 8px;
+    font-size: 32px;
+}
+
+header p {
+    color: #64748b;
+}
+
+form {
+    padding: 24px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 3px 15px #0000000a;
+}
+
+form > label,
+legend {
+    display: block;
+    margin-bottom: 10px;
+    font-weight: bold;
+}
+
+.search-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 22px;
+}
+
+input[type="text"],
+select {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 7px;
+    font-size: 15px;
+}
+
+button {
+    padding: 12px 22px;
+    border: none;
+    border-radius: 7px;
+    background: #2563eb;
+    color: white;
+    font-size: 15px;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #1d4ed8;
+}
+
+fieldset {
+    margin-top: 20px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+}
+
+.checkbox {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    margin: 5px 14px 10px 0;
+}
+
+#status {
+    margin: 24px 0 16px;
+    color: #475569;
+}
+
+.books {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+}
+
+.book-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 18px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px #00000008;
+}
+
+.book-card img {
+    width: 95px;
+    max-height: 145px;
+    object-fit: cover;
+    border-radius: 5px;
+}
+
+.book-card h2 {
+    margin: 0 0 12px;
+    font-size: 18px;
+    overflow-wrap: anywhere;
+}
+
+.book-card p {
+    color: #64748b;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+@media (max-width: 500px) {
+    .container {
+        margin: 10px auto;
+        padding: 14px;
+    }
+
+    .search-row {
+        flex-direction: column;
+    }
+}
